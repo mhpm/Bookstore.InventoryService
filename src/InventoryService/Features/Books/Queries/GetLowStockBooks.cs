@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
 using InventoryService.Data;
 
 namespace InventoryService.Features.Books.Queries
@@ -18,10 +17,8 @@ namespace InventoryService.Features.Books.Queries
 
         public async Task<List<BookDto>> Handle(GetLowStockBooksQuery request, CancellationToken cancellationToken)
         {
-            var thresholdParam = new SqlParameter("@Threshold", request.Threshold);
-
             var books = await _context.Books
-                .FromSqlRaw("EXEC sp_GetLowStockBooks @Threshold", thresholdParam)
+                .Where(book => book.StockQuantity < request.Threshold)
                 .ToListAsync(cancellationToken);
 
             return books.Select(book => new BookDto(

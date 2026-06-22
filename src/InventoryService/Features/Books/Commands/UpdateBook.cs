@@ -1,5 +1,6 @@
 using MediatR;
 using InventoryService.Data;
+using InventoryService.Data.Repositories;
 using Mapster;
 
 namespace InventoryService.Features.Books.Commands
@@ -12,18 +13,27 @@ namespace InventoryService.Features.Books.Commands
         int? StockQuantity = null
     ) : IRequest<bool>;
 
+    /// <summary>
+    /// DEPENDENCY INVERSION PRINCIPLE (DIP):
+    /// El Handler consume IBookRepository (abstracción) para realizar la modificación de la entidad,
+    /// ocultando los detalles internos de base de datos.
+    /// 
+    /// CQRS PATTERN (COMMAND):
+    /// Representa un Comando de modificación. Obtiene una entidad bajo seguimiento (Tracking), aplica
+    /// los cambios y los guarda en la base de datos de manera transaccional.
+    /// </summary>
     public class UpdateBookCommandHandler : IRequestHandler<UpdateBookCommand, bool>
     {
-        private readonly InventoryDbContext _context;
+        private readonly IBookRepository _repository;
 
-        public UpdateBookCommandHandler(InventoryDbContext context)
+        public UpdateBookCommandHandler(IBookRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         public async Task<bool> Handle(UpdateBookCommand request, CancellationToken cancellationToken)
         {
-            var book = await _context.Books.FindAsync(new object[] { request.Id }, cancellationToken);
+            var book = await _repository.GetByIdAsync(request.Id, cancellationToken);
 
             if (book == null)
             {
@@ -37,8 +47,9 @@ namespace InventoryService.Features.Books.Commands
 
             request.Adapt(book, config);
 
-            await _context.SaveChangesAsync(cancellationToken);
+            await _repository.SaveChangesAsync(cancellationToken);
             return true;
         }
     }
 }
+

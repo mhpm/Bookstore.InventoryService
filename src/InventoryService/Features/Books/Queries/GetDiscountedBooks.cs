@@ -1,6 +1,5 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using InventoryService.Data;
+using InventoryService.Data.Repositories;
 
 namespace InventoryService.Features.Books.Queries
 {
@@ -15,27 +14,37 @@ namespace InventoryService.Features.Books.Queries
 
     public record GetDiscountedBooksQuery(decimal DiscountPercentage) : IRequest<List<DiscountedBookDto>>;
 
+    /// <summary>
+    /// DEPENDENCY INVERSION PRINCIPLE (DIP):
+    /// El Handler consume IBookRepository en lugar del DbContext directamente.
+    /// 
+    /// CQRS PATTERN (QUERY) & OPEN/CLOSED PRINCIPLE (OCP):
+    /// Esta consulta calcula los precios con descuento delegando al repositorio. La invocación a
+    /// la función de base de datos 'CalculateDiscount' está oculta en la capa de datos.
+    /// Si cambia la lógica física del cálculo, el Handler permanece intacto y cerrado al cambio.
+    /// </summary>
     public class GetDiscountedBooksQueryHandler : IRequestHandler<GetDiscountedBooksQuery, List<DiscountedBookDto>>
     {
-        private readonly InventoryDbContext _context;
+        private readonly IBookRepository _repository;
 
-        public GetDiscountedBooksQueryHandler(InventoryDbContext context)
+        public GetDiscountedBooksQueryHandler(IBookRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         public async Task<List<DiscountedBookDto>> Handle(GetDiscountedBooksQuery request, CancellationToken cancellationToken)
         {
-            return await _context.Books
-                .Select(book => new DiscountedBookDto(
-                    book.Id,
-                    book.Title,
-                    book.Author,
-                    book.Price,
-                    InventoryDbContext.CalculateDiscount(book.Price, request.DiscountPercentage),
-                    book.StockQuantity
-                ))
-                .ToListAsync(cancellationToken);
+            var results = await _repository.GetDiscountedAsync(request.DiscountPercentage, cancellationToken);
+
+            return results.Select(r => new DiscountedBookDto(
+                r.Book.Id,
+                r.Book.Title,
+                r.Book.Author,
+                r.Book.Price,
+                r.DiscountedPrice,
+                r.Book.StockQuantity
+            )).ToList();
         }
     }
 }
+

@@ -1,5 +1,6 @@
 using MediatR;
 using InventoryService.Data;
+using InventoryService.Data.Repositories;
 
 namespace InventoryService.Features.Books.Commands
 {
@@ -10,13 +11,21 @@ namespace InventoryService.Features.Books.Commands
         int StockQuantity
     ) : IRequest<int>;
 
+    /// <summary>
+    /// DEPENDENCY INVERSION PRINCIPLE (DIP):
+    /// Este Handler depende de la abstracción IBookRepository en lugar de acoplarse directamente a EF Core / DbContext.
+    /// 
+    /// CQRS PATTERN (COMMAND):
+    /// Este Handler es exclusivo de la escritura (Command). Recibe una acción que altera el estado del sistema,
+    /// crea una nueva entidad que será rastreada y persiste los cambios en la base de datos.
+    /// </summary>
     public class CreateBookCommandHandler : IRequestHandler<CreateBookCommand, int>
     {
-        private readonly InventoryDbContext _context;
+        private readonly IBookRepository _repository;
 
-        public CreateBookCommandHandler(InventoryDbContext context)
+        public CreateBookCommandHandler(IBookRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         public async Task<int> Handle(CreateBookCommand request, CancellationToken cancellationToken)
@@ -29,10 +38,11 @@ namespace InventoryService.Features.Books.Commands
                 StockQuantity = request.StockQuantity
             };
 
-            _context.Books.Add(book);
-            await _context.SaveChangesAsync(cancellationToken);
+            await _repository.AddAsync(book, cancellationToken);
+            await _repository.SaveChangesAsync(cancellationToken);
 
             return book.Id;
         }
     }
 }
+

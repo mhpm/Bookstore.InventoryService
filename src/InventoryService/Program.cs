@@ -2,6 +2,8 @@ using InventoryService.Middleware;
 using MassTransit;
 using InventoryService.Messaging;
 using InventoryService.Data;
+using InventoryService.Data.Repositories;
+using InventoryService.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<InventoryDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+// DEPENDENCY INVERSION PRINCIPLE (DIP) & DEPENDENCY INJECTION (DI):
+// Registramos las abstracciones IBookRepository e IBookStockService con sus respectivas
+// clases concretas en el contenedor IoC. Así, cualquier clase (Handlers, Servicios, Consumidores)
+// que requiera estas dependencias recibirá la instancia adecuada en tiempo de ejecución.
+builder.Services.AddScoped<IBookRepository, BookRepository>();
+builder.Services.AddScoped<IBookStockService, BookStockService>();
 
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
@@ -24,6 +33,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
 
 builder.Services.AddMassTransit(x =>
 {

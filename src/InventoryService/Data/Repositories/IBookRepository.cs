@@ -20,6 +20,12 @@ namespace InventoryService.Data.Repositories
         
         Task<Book?> GetByIdNoTrackingAsync(int id, CancellationToken cancellationToken = default);
         Task<List<Book>> GetAllAsync(CancellationToken cancellationToken = default);
+        Task<(List<Book> Items, int TotalCount)> GetPagedAsync(
+            int? pageNumber, 
+            int? pageSize, 
+            string? category, 
+            string? searchQuery, 
+            CancellationToken cancellationToken = default);
         Task<List<Book>> GetLowStockAsync(int threshold, CancellationToken cancellationToken = default);
         Task<List<(Book Book, decimal DiscountedPrice)>> GetDiscountedAsync(decimal discountPercentage, CancellationToken cancellationToken = default);
 

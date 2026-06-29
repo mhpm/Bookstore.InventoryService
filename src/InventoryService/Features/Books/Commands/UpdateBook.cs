@@ -10,7 +10,9 @@ namespace InventoryService.Features.Books.Commands
         string? Title = null,
         string? Author = null,
         decimal? Price = null,
-        int? StockQuantity = null
+        int? StockQuantity = null,
+        double? Rating = null,
+        string? Category = null
     ) : IRequest<bool>;
 
     /// <summary>

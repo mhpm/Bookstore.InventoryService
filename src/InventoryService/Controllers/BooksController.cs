@@ -31,9 +31,13 @@ namespace InventoryService.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<BookDto>>> GetBooks()
+        public async Task<ActionResult<PaginatedBooksResponse>> GetBooks(
+            [FromQuery] int? pageNumber = null,
+            [FromQuery] int? pageSize = null,
+            [FromQuery] string? category = null,
+            [FromQuery] string? search = null)
         {
-            var books = await _mediator.Send(new GetBooksQuery());
+            var books = await _mediator.Send(new GetBooksQuery(pageNumber, pageSize, category, search));
             return Ok(books);
         }
 

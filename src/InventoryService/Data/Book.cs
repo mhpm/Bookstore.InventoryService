@@ -7,5 +7,7 @@ namespace InventoryService.Data
         public required string Author { get; set; }
         public decimal Price { get; set; }
         public int StockQuantity { get; set; }
+        public double Rating { get; set; } = 0.0;
+        public string Category { get; set; } = "General";
     }
 }

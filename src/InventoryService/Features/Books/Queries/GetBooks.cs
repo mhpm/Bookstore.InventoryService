@@ -9,10 +9,25 @@ namespace InventoryService.Features.Books.Queries
         string Title, 
         string Author, 
         decimal Price, 
-        int StockQuantity
+        int StockQuantity,
+        double Rating,
+        string Category
     );
 
-    public record GetBooksQuery() : IRequest<List<BookDto>>;
+    public record PaginatedBooksResponse(
+        List<BookDto> Items,
+        int PageNumber,
+        int PageSize,
+        int TotalCount,
+        int TotalPages
+    );
+
+    public record GetBooksQuery(
+        int? PageNumber = null, 
+        int? PageSize = null, 
+        string? Category = null, 
+        string? SearchQuery = null
+    ) : IRequest<PaginatedBooksResponse>;
 
     /// <summary>
     /// DEPENDENCY INVERSION PRINCIPLE (DIP):
@@ -22,7 +37,7 @@ namespace InventoryService.Features.Books.Queries
     /// Representa una Consulta de lectura (Query). No altera el estado del sistema. En el repositorio
     /// se optimiza usando AsNoTracking() para evitar sobrecarga de rendimiento por seguimiento de cambios.
     /// </summary>
-    public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, List<BookDto>>
+    public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, PaginatedBooksResponse>
     {
         private readonly IBookRepository _repository;
 
@@ -31,17 +46,32 @@ namespace InventoryService.Features.Books.Queries
             _repository = repository;
         }
 
-        public async Task<List<BookDto>> Handle(GetBooksQuery request, CancellationToken cancellationToken)
+        public async Task<PaginatedBooksResponse> Handle(GetBooksQuery request, CancellationToken cancellationToken)
         {
-            var books = await _repository.GetAllAsync(cancellationToken);
+            var (books, totalCount) = await _repository.GetPagedAsync(
+                request.PageNumber,
+                request.PageSize,
+                request.Category,
+                request.SearchQuery,
+                cancellationToken
+            );
 
-            return books.Select(book => new BookDto(
+            var dtos = books.Select(book => new BookDto(
                 book.Id,
                 book.Title,
                 book.Author,
                 book.Price,
-                book.StockQuantity
+                book.StockQuantity,
+                book.Rating,
+                book.Category
             )).ToList();
+
+            int pageNumber = request.PageNumber ?? 1;
+            int pageSize = request.PageSize ?? totalCount;
+            if (pageSize <= 0) pageSize = 10;
+            int totalPages = (int)System.Math.Ceiling((double)totalCount / pageSize);
+
+            return new PaginatedBooksResponse(dtos, pageNumber, pageSize, totalCount, totalPages);
         }
     }
 }

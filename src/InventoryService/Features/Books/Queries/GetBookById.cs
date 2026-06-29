@@ -37,7 +37,9 @@ namespace InventoryService.Features.Books.Queries
                 book.Title,
                 book.Author,
                 book.Price,
-                book.StockQuantity
+                book.StockQuantity,
+                book.Rating,
+                book.Category
             );
         }
     }

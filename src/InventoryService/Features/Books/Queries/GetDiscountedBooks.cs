@@ -9,7 +9,9 @@ namespace InventoryService.Features.Books.Queries
         string Author,
         decimal Price,
         decimal DiscountedPrice,
-        int StockQuantity
+        int StockQuantity,
+        double Rating,
+        string Category
     );
 
     public record GetDiscountedBooksQuery(decimal DiscountPercentage) : IRequest<List<DiscountedBookDto>>;
@@ -42,7 +44,9 @@ namespace InventoryService.Features.Books.Queries
                 r.Book.Author,
                 r.Book.Price,
                 r.DiscountedPrice,
-                r.Book.StockQuantity
+                r.Book.StockQuantity,
+                r.Book.Rating,
+                r.Book.Category
             )).ToList();
         }
     }

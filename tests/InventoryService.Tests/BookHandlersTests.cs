@@ -42,7 +42,7 @@ namespace InventoryService.Tests
             // Instanciamos el repositorio real y se lo inyectamos al Handler.
             var repository = new BookRepository(context);
             var handler = new CreateBookCommandHandler(repository);
-            var command = new CreateBookCommand("El Hobbit", "J.R.R. Tolkien", 150.00m, 5);
+            var command = new CreateBookCommand("El Hobbit", "J.R.R. Tolkien", 150.00m, 5, 4.8, "Fantasía");
 
             // Act
             var bookId = await handler.Handle(command, CancellationToken.None);
@@ -53,6 +53,8 @@ namespace InventoryService.Tests
             bookInDb.Should().NotBeNull();
             bookInDb!.Title.Should().Be("El Hobbit");
             bookInDb.Price.Should().Be(150.00m);
+            bookInDb.Rating.Should().Be(4.8);
+            bookInDb.Category.Should().Be("Fantasía");
         }
 
         [Fact]
@@ -97,7 +99,8 @@ namespace InventoryService.Tests
 
             // Assert
             result.Should().NotBeNull();
-            result.Count.Should().Be(2);
+            result.Items.Count.Should().Be(2);
+            result.TotalCount.Should().Be(2);
         }
 
         [Fact]
@@ -241,6 +244,53 @@ namespace InventoryService.Tests
         public Task<List<Book>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Books.ToList());
+        }
+
+        public Task<(List<Book> Items, int TotalCount)> GetPagedAsync(
+            int? pageNumber, 
+            int? pageSize, 
+            string? category, 
+            string? searchQuery, 
+            CancellationToken cancellationToken = default)
+        {
+            var query = Books.AsEnumerable();
+
+            if (!string.IsNullOrEmpty(category) && !category.Equals("Todas", System.StringComparison.OrdinalIgnoreCase))
+            {
+                var catLower = category.ToLower();
+                if (catLower == "general")
+                {
+                    query = query.Where(b => string.IsNullOrEmpty(b.Category) || b.Category.ToLower() == "general");
+                }
+                else
+                {
+                    query = query.Where(b => b.Category?.ToLower() == catLower);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                var searchLower = searchQuery.ToLower();
+                query = query.Where(b => (b.Title?.ToLower().Contains(searchLower) ?? false) || (b.Author?.ToLower().Contains(searchLower) ?? false));
+            }
+
+            var list = query.ToList();
+            var totalCount = list.Count;
+
+            List<Book> items;
+            if (pageNumber.HasValue && pageSize.HasValue)
+            {
+                items = list
+                    .Skip((pageNumber.Value - 1) * pageSize.Value)
+                    .Take(pageSize.Value)
+                    .ToList();
+            }
+            else
+            {
+                items = list;
+            }
+
+            return Task.FromResult((items, totalCount));
         }
 
         public Task<List<Book>> GetLowStockAsync(int threshold, CancellationToken cancellationToken = default)

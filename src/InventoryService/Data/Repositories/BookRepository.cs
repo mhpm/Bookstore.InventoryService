@@ -37,6 +37,52 @@ namespace InventoryService.Data.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<(List<Book> Items, int TotalCount)> GetPagedAsync(
+            int? pageNumber, 
+            int? pageSize, 
+            string? category, 
+            string? searchQuery, 
+            CancellationToken cancellationToken = default)
+        {
+            var query = _context.Books.AsNoTracking();
+
+            if (!string.IsNullOrEmpty(category) && !category.Equals("Todas", System.StringComparison.OrdinalIgnoreCase))
+            {
+                var catLower = category.ToLower();
+                if (catLower == "general")
+                {
+                    query = query.Where(b => string.IsNullOrEmpty(b.Category) || b.Category.ToLower() == "general");
+                }
+                else
+                {
+                    query = query.Where(b => b.Category.ToLower() == catLower);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                var searchLower = searchQuery.ToLower();
+                query = query.Where(b => b.Title.ToLower().Contains(searchLower) || b.Author.ToLower().Contains(searchLower));
+            }
+
+            var totalCount = await query.CountAsync(cancellationToken);
+
+            List<Book> items;
+            if (pageNumber.HasValue && pageSize.HasValue)
+            {
+                items = await query
+                    .Skip((pageNumber.Value - 1) * pageSize.Value)
+                    .Take(pageSize.Value)
+                    .ToListAsync(cancellationToken);
+            }
+            else
+            {
+                items = await query.ToListAsync(cancellationToken);
+            }
+
+            return (items, totalCount);
+        }
+
         public async Task<List<Book>> GetLowStockAsync(int threshold, CancellationToken cancellationToken = default)
         {
             return await _context.Books

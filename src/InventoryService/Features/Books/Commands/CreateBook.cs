@@ -8,7 +8,9 @@ namespace InventoryService.Features.Books.Commands
         string Title, 
         string Author, 
         decimal Price, 
-        int StockQuantity
+        int StockQuantity,
+        double Rating = 0.0,
+        string Category = "General"
     ) : IRequest<int>;
 
     /// <summary>
@@ -35,7 +37,9 @@ namespace InventoryService.Features.Books.Commands
                 Title = request.Title,
                 Author = request.Author,
                 Price = request.Price,
-                StockQuantity = request.StockQuantity
+                StockQuantity = request.StockQuantity,
+                Rating = request.Rating,
+                Category = request.Category
             };
 
             await _repository.AddAsync(book, cancellationToken);

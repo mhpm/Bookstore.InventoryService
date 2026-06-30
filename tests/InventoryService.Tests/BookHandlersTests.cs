@@ -57,6 +57,82 @@ namespace InventoryService.Tests
             bookInDb.Category.Should().Be("Fantasía");
         }
 
+        [Theory]
+        [InlineData("", "Autor Válido")]
+        [InlineData("   ", "Autor Válido")]
+        [InlineData("Título Válido", "")]
+        [InlineData("Título Válido", "   ")]
+        public async Task CreateBookCommandHandler_Should_Throw_ValidationException_When_Title_Or_Author_Are_Empty_Or_Whitespace(string title, string author)
+        {
+            // Arrange
+            var context = GetInMemoryDbContext();
+            var repository = new BookRepository(context);
+            var handler = new CreateBookCommandHandler(repository);
+            var command = new CreateBookCommand(title, author, 15.00m, 5);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<InventoryService.Exceptions.ValidationException>(() => 
+                handler.Handle(command, CancellationToken.None));
+        }
+
+        [Theory]
+        [InlineData("<script>alert(1)</script>", "Autor Válido")]
+        [InlineData("Título Válido", "Autor <script>")]
+        [InlineData("Título <html>", "Autor Válido")]
+        public async Task CreateBookCommandHandler_Should_Throw_ValidationException_When_Title_Or_Author_Contain_Html(string title, string author)
+        {
+            // Arrange
+            var context = GetInMemoryDbContext();
+            var repository = new BookRepository(context);
+            var handler = new CreateBookCommandHandler(repository);
+            var command = new CreateBookCommand(title, author, 15.00m, 5);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<InventoryService.Exceptions.ValidationException>(() => 
+                handler.Handle(command, CancellationToken.None));
+        }
+
+        [Fact]
+        public async Task CreateBookCommandHandler_Should_Trim_Title_And_Author()
+        {
+            // Arrange
+            var context = GetInMemoryDbContext();
+            var repository = new BookRepository(context);
+            var handler = new CreateBookCommandHandler(repository);
+            var command = new CreateBookCommand("   El Hobbit   ", "  J.R.R. Tolkien  ", 150.00m, 5);
+
+            // Act
+            var bookId = await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            var bookInDb = await context.Books.FindAsync(bookId);
+            bookInDb.Should().NotBeNull();
+            bookInDb!.Title.Should().Be("El Hobbit");
+            bookInDb.Author.Should().Be("J.R.R. Tolkien");
+        }
+
+        [Theory]
+        [InlineData("   ", null)]
+        [InlineData(null, "   ")]
+        [InlineData("<bad>", null)]
+        [InlineData(null, "<bad>")]
+        public async Task UpdateBookCommandHandler_Should_Throw_ValidationException_When_Title_Or_Author_Are_Invalid(string? title, string? author)
+        {
+            // Arrange
+            var context = GetInMemoryDbContext();
+            var seedBook = new Book { Title = "Original", Author = "Original", Price = 10m, StockQuantity = 10 };
+            context.Books.Add(seedBook);
+            await context.SaveChangesAsync();
+
+            var repository = new BookRepository(context);
+            var handler = new UpdateBookCommandHandler(repository);
+            var command = new UpdateBookCommand(seedBook.Id, Title: title, Author: author);
+
+            // Act & Assert
+            await Assert.ThrowsAsync<InventoryService.Exceptions.ValidationException>(() => 
+                handler.Handle(command, CancellationToken.None));
+        }
+
         [Fact]
         public async Task GetBookByIdQueryHandler_Should_Return_BookDto_If_Book_Exists()
         {

@@ -2,6 +2,7 @@ using MediatR;
 using InventoryService.Data;
 using InventoryService.Data.Repositories;
 using Mapster;
+using InventoryService.Exceptions;
 
 namespace InventoryService.Features.Books.Commands
 {
@@ -42,12 +43,42 @@ namespace InventoryService.Features.Books.Commands
                 return false; 
             }
 
+            var commandToProcess = request;
+
+            if (request.Title != null)
+            {
+                var trimmedTitle = request.Title.Trim();
+                if (string.IsNullOrWhiteSpace(trimmedTitle))
+                {
+                    throw new ValidationException("El título del libro no puede estar vacío ni contener solo espacios.");
+                }
+                if (trimmedTitle.Contains('<') || trimmedTitle.Contains('>'))
+                {
+                    throw new ValidationException("El título contiene caracteres no permitidos por razones de seguridad.");
+                }
+                commandToProcess = commandToProcess with { Title = trimmedTitle };
+            }
+
+            if (request.Author != null)
+            {
+                var trimmedAuthor = request.Author.Trim();
+                if (string.IsNullOrWhiteSpace(trimmedAuthor))
+                {
+                    throw new ValidationException("El autor del libro no puede estar vacío ni contener solo espacios.");
+                }
+                if (trimmedAuthor.Contains('<') || trimmedAuthor.Contains('>'))
+                {
+                    throw new ValidationException("El autor contiene caracteres no permitidos por razones de seguridad.");
+                }
+                commandToProcess = commandToProcess with { Author = trimmedAuthor };
+            }
+
             var config = new TypeAdapterConfig();
             
             config.NewConfig<UpdateBookCommand, Book>()
                   .IgnoreNullValues(true);
 
-            request.Adapt(book, config);
+            commandToProcess.Adapt(book, config);
 
             await _repository.SaveChangesAsync(cancellationToken);
             return true;

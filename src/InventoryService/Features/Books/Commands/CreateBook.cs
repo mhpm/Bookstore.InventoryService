@@ -1,6 +1,7 @@
 using MediatR;
 using InventoryService.Data;
 using InventoryService.Data.Repositories;
+using InventoryService.Exceptions;
 
 namespace InventoryService.Features.Books.Commands
 {
@@ -32,10 +33,33 @@ namespace InventoryService.Features.Books.Commands
 
         public async Task<int> Handle(CreateBookCommand request, CancellationToken cancellationToken)
         {
+            var trimmedTitle = request.Title?.Trim();
+            var trimmedAuthor = request.Author?.Trim();
+
+            if (string.IsNullOrWhiteSpace(trimmedTitle))
+            {
+                throw new ValidationException("El título del libro no puede estar vacío ni contener solo espacios.");
+            }
+
+            if (string.IsNullOrWhiteSpace(trimmedAuthor))
+            {
+                throw new ValidationException("El autor del libro no puede estar vacío ni contener solo espacios.");
+            }
+
+            if (trimmedTitle.Contains('<') || trimmedTitle.Contains('>'))
+            {
+                throw new ValidationException("El título contiene caracteres no permitidos por razones de seguridad.");
+            }
+
+            if (trimmedAuthor.Contains('<') || trimmedAuthor.Contains('>'))
+            {
+                throw new ValidationException("El autor contiene caracteres no permitidos por razones de seguridad.");
+            }
+
             var book = new Book
             {
-                Title = request.Title,
-                Author = request.Author,
+                Title = trimmedTitle,
+                Author = trimmedAuthor,
                 Price = request.Price,
                 StockQuantity = request.StockQuantity,
                 Rating = request.Rating,
